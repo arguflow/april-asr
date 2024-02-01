@@ -12,6 +12,7 @@ description = "Offline open source speech recognition API based on next-generati
 
 [dependencies]
 libc = "0.2.144"
+aprilasr-sys = "0.1.1"
 
 [build-dependencies]
 bindgen = "0.65.1"
@@ -30,4 +31,3 @@ disable-sys-build-script = []
 # Disable the build.rs on https://docs.rs since it can cause
 # issue there and it's not needed.
 features = ["disable-sys-build-script"]
-

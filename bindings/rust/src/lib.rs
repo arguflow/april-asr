@@ -6,8 +6,8 @@
 
 #![doc = include_str!("../README.md")]
 
+use aprilasr_sys::ffi as afi;
 use std::{ffi::CStr, mem, rc::Rc};
-mod bindgen_bindings;
 
 #[derive(Debug)]
 /// Error Types for this crate
@@ -23,7 +23,7 @@ pub enum AprilError {
 /// This function must be called before any other April ASR functions.
 pub fn april_asr_init() {
     unsafe {
-        bindgen_bindings::aam_api_init(1);
+        afi::aam_api_init(1);
     }
 }
 
@@ -44,7 +44,7 @@ pub fn april_asr_init() {
 /// ```
 #[derive(Debug)]
 pub struct Model {
-    internal_model: bindgen_bindings::AprilASRModel,
+    internal_model: afi::AprilASRModel,
 }
 
 impl Model {
@@ -68,7 +68,7 @@ impl Model {
         }
         let file_path = file_path.to_string();
         let internal_model =
-            unsafe { bindgen_bindings::aam_create_model(file_path.as_ptr() as *const i8) };
+            unsafe { afi::aam_create_model(file_path.as_ptr() as *const i8) };
         if internal_model.is_null() {
             return Err(AprilError::InvalidModel);
         }
@@ -77,7 +77,7 @@ impl Model {
 
     /// Get the name of the model.
     pub fn get_name(&self) -> &str {
-        let char_ptr = unsafe { bindgen_bindings::aam_get_name(self.internal_model) };
+        let char_ptr = unsafe { afi::aam_get_name(self.internal_model) };
         let c_str = unsafe { CStr::from_ptr(char_ptr) };
 
         c_str.to_str().unwrap()
@@ -85,7 +85,7 @@ impl Model {
 
     /// Get the description of the model.
     pub fn get_description(&self) -> &str {
-        let char_ptr = unsafe { bindgen_bindings::aam_get_description(self.internal_model) };
+        let char_ptr = unsafe { afi::aam_get_description(self.internal_model) };
         let c_str = unsafe { CStr::from_ptr(char_ptr) };
 
         c_str.to_str().unwrap()
@@ -93,7 +93,7 @@ impl Model {
 
     /// Get the language of the model.
     pub fn get_language(&self) -> &str {
-        let char_ptr = unsafe { bindgen_bindings::aam_get_language(self.internal_model) };
+        let char_ptr = unsafe { afi::aam_get_language(self.internal_model) };
         let c_str = unsafe { CStr::from_ptr(char_ptr) };
 
         c_str.to_str().unwrap()
@@ -102,7 +102,7 @@ impl Model {
     /// Get the sample rate of model in Hz. For example, may return 16000
     pub fn get_sample_rate(&self) -> u32 {
         let sample: u32 =
-            unsafe { bindgen_bindings::aam_get_sample_rate(self.internal_model) } as u32;
+            unsafe { afi::aam_get_sample_rate(self.internal_model) } as u32;
 
         sample
     }
@@ -111,7 +111,7 @@ impl Model {
 impl Drop for Model {
     fn drop(&mut self) {
         unsafe {
-            bindgen_bindings::aam_free(self.internal_model);
+            afi::aam_free(self.internal_model);
         }
     }
 }
@@ -138,7 +138,7 @@ pub enum SessionFlags {
     ASYNC_NON_REALTIME = 2,
 }
 
-impl From<SessionFlags> for bindgen_bindings::AprilConfigFlagBits {
+impl From<SessionFlags> for afi::AprilConfigFlagBits {
     fn from(value: SessionFlags) -> Self {
         let n: u32 = value as u32;
         n
@@ -155,13 +155,13 @@ pub enum TokenFlags {
     SentenceEnd,
 }
 
-impl From<bindgen_bindings::AprilTokenFlagBits> for TokenFlags {
-    fn from(value: bindgen_bindings::AprilTokenFlagBits) -> Self {
+impl From<afi::AprilTokenFlagBits> for TokenFlags {
+    fn from(value: afi::AprilTokenFlagBits) -> Self {
         match value {
-            bindgen_bindings::AprilTokenFlagBits_APRIL_TOKEN_FLAG_WORD_BOUNDARY_BIT => {
+            afi::AprilTokenFlagBits_APRIL_TOKEN_FLAG_WORD_BOUNDARY_BIT => {
                 TokenFlags::WordBoundary
             }
-            bindgen_bindings::AprilTokenFlagBits_APRIL_TOKEN_FLAG_SENTENCE_END_BIT => {
+            afi::AprilTokenFlagBits_APRIL_TOKEN_FLAG_SENTENCE_END_BIT => {
                 TokenFlags::SentenceEnd
             }
             _ => panic!("Invalid token flag when parsing token, this should never happen"),
@@ -186,8 +186,8 @@ pub struct Token {
     pub time_ms: usize,
 }
 
-impl From<bindgen_bindings::AprilToken> for Token {
-    fn from(token: bindgen_bindings::AprilToken) -> Self {
+impl From<afi::AprilToken> for Token {
+    fn from(token: afi::AprilToken) -> Self {
         let cstr = unsafe { CStr::from_ptr(token.token) };
         Token {
             token: cstr.to_str().unwrap().to_string(),
@@ -242,35 +242,35 @@ pub enum AprilResult {
 /// [`SessionFlags`]: enum.SessionFlags.html
 #[derive(Debug)]
 pub struct Session {
-    internal_session: bindgen_bindings::AprilASRSession,
+    internal_session: afi::AprilASRSession,
     // Hold onto these so it won't be freed
     _callback_func: fn(AprilResult),
-    _config: bindgen_bindings::AprilConfig,
+    _config: afi::AprilConfig,
     _model: Rc<Model>,
 }
 
 extern "C" fn handler_wrapper(
     userdata: *mut ::std::os::raw::c_void,
-    result_type: bindgen_bindings::AprilResultType,
+    result_type: afi::AprilResultType,
     count: usize,
-    tokens: *const bindgen_bindings::AprilToken,
+    tokens: *const afi::AprilToken,
 ) {
     let result: AprilResult = match result_type {
-        bindgen_bindings::AprilResultType_APRIL_RESULT_UNKNOWN => AprilResult::Unknown,
-        bindgen_bindings::AprilResultType_APRIL_RESULT_ERROR_CANT_KEEP_UP => {
+        afi::AprilResultType_APRIL_RESULT_UNKNOWN => AprilResult::Unknown,
+        afi::AprilResultType_APRIL_RESULT_ERROR_CANT_KEEP_UP => {
             AprilResult::CantKeepUp
         }
-        bindgen_bindings::AprilResultType_APRIL_RESULT_RECOGNITION_PARTIAL => {
+        afi::AprilResultType_APRIL_RESULT_RECOGNITION_PARTIAL => {
             let tokens = unsafe { std::slice::from_raw_parts(tokens, count) };
             let tokens: Vec<Token> = tokens.iter().map(|t| (*t).into()).collect();
             AprilResult::PartialRecognition(tokens)
         }
-        bindgen_bindings::AprilResultType_APRIL_RESULT_RECOGNITION_FINAL => {
+        afi::AprilResultType_APRIL_RESULT_RECOGNITION_FINAL => {
             let tokens = unsafe { std::slice::from_raw_parts(tokens, count) };
             let tokens: Vec<Token> = tokens.iter().map(|t| (*t).into()).collect();
             AprilResult::FinalRecognition(tokens)
         }
-        bindgen_bindings::AprilResultType_APRIL_RESULT_SILENCE => AprilResult::Silence,
+        afi::AprilResultType_APRIL_RESULT_SILENCE => AprilResult::Silence,
         _ => unreachable!(),
     };
 
@@ -308,15 +308,15 @@ impl Session {
         flags: SessionFlags,
         handler: fn(result: AprilResult) -> (),
     ) -> Session {
-        let config = bindgen_bindings::AprilConfig {
-            speaker: bindgen_bindings::AprilSpeakerID { data: [0; 16usize] },
+        let config = afi::AprilConfig {
+            speaker: afi::AprilSpeakerID { data: [0; 16usize] },
             handler: Some(handler_wrapper),
             userdata: handler as *mut ::std::os::raw::c_void,
             flags: flags.into(),
         };
 
         let internal_session =
-            unsafe { bindgen_bindings::aas_create_session(model.internal_model, config) };
+            unsafe { afi::aas_create_session(model.internal_model, config) };
 
         Session {
             internal_session,
@@ -329,7 +329,7 @@ impl Session {
     /// Processes any unprocessed samples and produces a final result.
     pub fn flush(&self) {
         unsafe {
-            bindgen_bindings::aas_flush(self.internal_session);
+            afi::aas_flush(self.internal_session);
         }
     }
 
@@ -338,7 +338,7 @@ impl Session {
     /// below 1.0, audio is not being sped up. If greater than 1.0, the audio is
     /// being sped up and the accuracy may be reduced.
     pub fn realtime_get_speedup(&self) -> f32 {
-        unsafe { bindgen_bindings::aas_realtime_get_speedup(self.internal_session) }
+        unsafe { afi::aas_realtime_get_speedup(self.internal_session) }
     }
 
     /// Feed PCM16 audio data to the session, must be single-channel and sampled
@@ -350,7 +350,7 @@ impl Session {
             .collect();
 
         unsafe {
-            bindgen_bindings::aas_feed_pcm16(
+            afi::aas_feed_pcm16(
                 self.internal_session,
                 short_vec.as_mut_ptr(),
                 short_vec.len(),
@@ -362,7 +362,7 @@ impl Session {
 impl Drop for Session {
     fn drop(&mut self) {
         unsafe {
-            bindgen_bindings::aas_free(self.internal_session);
+            afi::aas_free(self.internal_session);
         }
     }
 }
