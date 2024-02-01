@@ -68,7 +68,7 @@ impl Model {
         }
         let file_path = file_path.to_string();
         let internal_model =
-            unsafe { afi::aam_create_model(file_path.as_ptr() as *const i8) };
+            unsafe { afi::aam_create_model(file_path.as_ptr() as *const u8) };
         if internal_model.is_null() {
             return Err(AprilError::InvalidModel);
         }
